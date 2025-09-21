@@ -1,6 +1,6 @@
 # PyCommander - An AI-Powered Terminal
 
-This is a Next.js application built in Firebase Studio that simulates a terminal experience with AI-powered command generation using Google's Gemini model.
+This application simulates a terminal experience with AI-powered command generation using Google's Gemini model.
 
 ## Running the Project Locally
 
