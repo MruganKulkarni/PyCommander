@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useFormState } from 'react-dom';
+import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
 import { getCommandFromNaturalLanguage } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -50,7 +49,7 @@ export function Terminal() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const [aiState, getCommandAction] = useFormState(
+  const [aiState, getCommandAction] = useActionState(
     getCommandFromNaturalLanguage,
     { command: null, error: null }
   );
