@@ -18,10 +18,10 @@ The AI features are powered by Google's Gemini model. To use it on your local ma
 
 - Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 - In the root directory of your project, create a new file named `.env.local`.
-- Add the following line to the `.env.local` file, replacing `YOUR_API_KEY` with the key you just obtained:
+- Add the following line to the `.env.local` file, replacing `YOUR__GEMINI_API_KEY` with the key you just obtained:
 
 ```
-GEMINI_API_KEY=YOUR_API_KEY
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
 ### 2. Install Dependencies
