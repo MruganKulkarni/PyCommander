@@ -1,44 +1,46 @@
 
 'use client';
 import { useRef, useState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
+import { Button } from './ui/button';
 
 export const Prompt = ({ currentCwd }: { currentCwd: string }) => (
-    <div className="flex">
-      <span className="text-primary">user@pycommander</span>
-      <span className="text-foreground">:</span>
-      <span className="text-accent">{currentCwd}</span>
-      <span className="text-foreground">$ &nbsp;</span>
-    </div>
+  <div className="flex">
+    <span className="text-primary">user@pycommander</span>
+    <span className="text-foreground">:</span>
+    <span className="text-accent">{currentCwd}</span>
+    <span className="text-foreground">$ &nbsp;</span>
+  </div>
 );
-  
 
 type TerminalInputProps = {
-    cwd: string;
-    onSubmit: (command: string) => void;
-    history: string[];
-    isProcessing: boolean;
+  cwd: string;
+  history: string[];
+  isProcessing: boolean;
 };
 
-export function TerminalInput({ cwd, onSubmit, history, isProcessing }: TerminalInputProps) {
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="hidden">
+      Submit
+    </Button>
+  );
+}
+
+export function TerminalInput({
+  cwd,
+  history,
+  isProcessing,
+}: TerminalInputProps) {
   const [input, setInput] = useState('');
   const [historyIndex, setHistoryIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [isProcessing]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedInput = input.trim();
-    if (!trimmedInput || isProcessing) return;
-    
-    onSubmit(trimmedInput);
-    
-    setHistoryIndex(-1);
-    setInput('');
-  };
-  
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -58,33 +60,42 @@ export function TerminalInput({ cwd, onSubmit, history, isProcessing }: Terminal
         setInput('');
       }
     } else if (e.key === 'Tab') {
-        e.preventDefault();
-        // Autocomplete logic can be added here
+      e.preventDefault();
+      // Autocomplete logic can be added here
     }
   };
 
+  useEffect(() => {
+    if (!isProcessing) {
+      setInput('');
+      setHistoryIndex(-1);
+    }
+  }, [isProcessing]);
+
   return (
     <div>
-     {!isProcessing && (
-        <form onSubmit={handleSubmit} className="flex items-center mt-2">
-            <Prompt currentCwd={cwd} />
-            <div className="relative flex-1">
+      {!isProcessing && (
+        <div className="flex items-center mt-2">
+          <Prompt currentCwd={cwd} />
+          <div className="relative flex-1">
             <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full bg-transparent text-foreground outline-none"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                disabled={isProcessing}
+              ref={inputRef}
+              type="text"
+              name="command"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full bg-transparent text-foreground outline-none"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              disabled={isProcessing}
             />
-            </div>
-        </form>
-    )}
+            <SubmitButton />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

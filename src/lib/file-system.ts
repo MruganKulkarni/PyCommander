@@ -43,7 +43,7 @@ let fs: Directory = {
   },
 };
 
-const resolvePath = (cwd: string, path: string): string => {
+export const resolvePath = (cwd: string, path: string): string => {
   if (path.startsWith('~/')) {
     path = path.substring(1);
   } else if (path.startsWith('/')) {
@@ -89,9 +89,9 @@ const getNode = (path: string): FileSystemNode | null => {
 const getParentNode = (path: string): Directory | null => {
   if (path === '~' || !path.includes('/')) return fs.children['~'] as Directory;
   const parentPath = path.substring(0, path.lastIndexOf('/'));
-  const parentNode = getNode(parentPath);
-  if (parentNode && parentNode.type === 'directory') {
-    return parentNode;
+  const node = getNode(parentPath);
+  if (node && node.type === 'directory') {
+    return node;
   }
   return null;
 };
@@ -107,13 +107,31 @@ export const listDirectory = (path: string): string[] | null => {
 };
 
 export const createDirectory = (cwd: string, dirName: string): boolean => {
-  const parentNode = getNode(cwd);
+  const parentPath = resolvePath(cwd, '.');
+  const parentNode = getNode(parentPath);
+
   if (parentNode && parentNode.type === 'directory') {
-    if (parentNode.children[dirName]) {
-      return false; // Already exists
+    const newDirPath = resolvePath(cwd, dirName);
+    const dirParts = newDirPath.replace('~/', '').split('/');
+    const finalDirName = dirParts.pop();
+    
+    let currentDir = parentNode;
+    if (dirParts.length > 0 && parentPath === '~') {
+       currentDir = fs.children['~'] as Directory;
+       for (const part of dirParts) {
+          if (currentDir.children[part] && currentDir.children[part].type === 'directory') {
+            currentDir = currentDir.children[part] as Directory;
+          } else {
+            // path does not exist
+            return false;
+          }
+       }
     }
-    parentNode.children[dirName] = { type: 'directory', children: {} };
-    return true;
+    
+    if (finalDirName && !currentDir.children[finalDirName]) {
+      currentDir.children[finalDirName] = { type: 'directory', children: {} };
+      return true;
+    }
   }
   return false;
 };

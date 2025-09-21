@@ -57,6 +57,7 @@ export async function POST(req: Request) {
         if (!args[0]) {
           return NextResponse.json({ error: 'mkdir: missing operand' });
         }
+        const newPath = FS.resolvePath(cwd, args[0]);
         const success = FS.createDirectory(cwd, args[0]);
         return success
           ? NextResponse.json({ output: '' })
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
         if (!args[0]) {
             return NextResponse.json({ error: 'cat: missing operand' });
         }
-        const path = FS.changeDirectory(cwd, args[0]);
+        const path = FS.resolvePath(cwd, args[0]);
         if (!path) {
           return NextResponse.json({ error: `cat: ${args[0]}: No such file or directory` });
         }
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
         if (!args[0]) {
             return NextResponse.json({ error: 'rm: missing operand' });
         }
-        const path = FS.changeDirectory(cwd, args[0]);
+        const path = FS.resolvePath(cwd, args[0]);
         if (!path) {
             return NextResponse.json({ error: `rm: cannot remove '${args[0]}': No such file or directory` });
         }
