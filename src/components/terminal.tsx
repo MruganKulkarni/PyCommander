@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useActionState } from 'react';
+import { useState, useRef, useEffect, useCallback, useActionState, useTransition } from 'react';
 import { getCommandFromNaturalLanguage } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 import { Sparkles } from 'lucide-react';
+import { TerminalInput, Prompt } from './terminal-input';
 
 type Output = {
   id: number;
@@ -38,24 +38,17 @@ export function Terminal() {
   const [outputs, setOutputs] = useState<Output[]>([
     { id: 0, type: 'response', content: WELCOME_MESSAGE },
   ]);
-  const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const [cwd, setCwd] = useState('~');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const [aiState, getCommandAction] = useActionState(
+  const [aiState, getCommandAction, isAiProcessing] = useActionState(
     getCommandFromNaturalLanguage,
     { command: null, error: null }
   );
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     if(viewportRef.current) {
@@ -66,10 +59,9 @@ export function Terminal() {
   useEffect(() => {
     if (aiState.command && !aiState.error) {
       addOutput({ type: 'ai_response', content: `Executing: ${aiState.command}` });
-      handleCommand(aiState.command, cwd);
+      handleCommand(aiState.command, cwd, true);
     } else if (aiState.error) {
       addOutput({ type: 'error', content: `AI Error: ${aiState.error}` });
-      setIsProcessing(false);
     }
   }, [aiState]);
 
@@ -77,19 +69,22 @@ export function Terminal() {
     setOutputs(prev => [...prev, { ...newOutput, id: prev.length }]);
   };
 
-  const handleCommand = async (command: string, currentCwd: string) => {
-    setIsProcessing(true);
-    const [cmd, ...args] = command.trim().split(' ');
+  const handleCommand = async (command: string, currentCwd: string, fromAi = false) => {
+    if (!fromAi) {
+      setIsProcessing(true);
+    }
+    
+    const [cmd] = command.trim().split(' ');
 
     if (cmd === 'clear') {
       setOutputs([]);
-      setIsProcessing(false);
+      if (!fromAi) setIsProcessing(false);
       return;
     }
     
     if (cmd === 'help') {
         addOutput({ type: 'response', content: HELP_MESSAGE });
-        setIsProcessing(false);
+        if (!fromAi) setIsProcessing(false);
         return;
     }
 
@@ -122,19 +117,16 @@ export function Terminal() {
         description: 'Could not connect to the backend.',
       });
     } finally {
-      setIsProcessing(false);
+      if (!fromAi) setIsProcessing(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedInput = input.trim();
-    if (!trimmedInput || isProcessing) return;
+  const processCommand = (command: string) => {
+    const trimmedInput = command.trim();
+    if (!trimmedInput) return;
 
     addOutput({ type: 'command', content: trimmedInput, cwd });
     setHistory(prev => [trimmedInput, ...prev]);
-    setHistoryIndex(-1);
-    setInput('');
 
     if (trimmedInput.startsWith('ai ')) {
       const prompt = trimmedInput.substring(3);
@@ -145,45 +137,13 @@ export function Terminal() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (history.length > 0) {
-        const newIndex = Math.min(history.length - 1, historyIndex + 1);
-        setHistoryIndex(newIndex);
-        setInput(history[newIndex]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIndex > 0) {
-        const newIndex = Math.max(0, historyIndex - 1);
-        setHistoryIndex(newIndex);
-        setInput(history[newIndex]);
-      } else {
-        setHistoryIndex(-1);
-        setInput('');
-      }
-    } else if (e.key === 'Tab') {
-        e.preventDefault();
-        // Autocomplete logic can be added here
-    }
-  };
-
-  const Prompt = ({ currentCwd }: { currentCwd: string }) => (
-    <div className="flex">
-      <span className="text-primary">user@pycommander</span>
-      <span className="text-foreground">:</span>
-      <span className="text-accent">{currentCwd}</span>
-      <span className="text-foreground">$ &nbsp;</span>
-    </div>
-  );
+  const isBusy = isProcessing || isAiProcessing;
 
   return (
     <div
-      className="h-full w-full overflow-hidden rounded-lg border bg-background p-4"
-      onClick={() => inputRef.current?.focus()}
+      className="h-full w-full overflow-hidden rounded-lg border bg-background p-4 flex flex-col"
     >
-      <ScrollArea className="h-full w-full" viewportRef={viewportRef}>
+      <ScrollArea className="flex-1 w-full" viewportRef={viewportRef}>
         <div className="pr-4">
           {outputs.map(output => (
             <div key={output.id} className="mb-2 w-full">
@@ -216,29 +176,20 @@ export function Terminal() {
               )}
             </div>
           ))}
-
-          {!isProcessing && (
-            <form onSubmit={handleSubmit} className="flex items-center">
-              <Prompt currentCwd={cwd} />
-              <div className="relative flex-1">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="w-full bg-transparent text-foreground outline-none"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  disabled={isProcessing}
-                />
+          {isAiProcessing && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                  <span className="italic">AI is thinking...</span>
               </div>
-            </form>
           )}
         </div>
       </ScrollArea>
+       <TerminalInput
+            cwd={cwd}
+            onSubmit={processCommand}
+            history={history}
+            isProcessing={isBusy}
+        />
     </div>
   );
 }
