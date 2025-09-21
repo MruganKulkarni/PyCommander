@@ -45,7 +45,6 @@ export function Terminal() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -228,21 +227,13 @@ export function Terminal() {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="peer absolute inset-0 w-full bg-transparent text-transparent caret-transparent outline-none"
+                  className="w-full bg-transparent text-foreground outline-none"
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck="false"
                   disabled={isProcessing}
                 />
-                <div className="pointer-events-none flex items-center">
-                  <span className="peer-focus:w-2 peer-focus:blinking-cursor h-5 w-0 bg-primary" />
-                  <span className='invisible'>{input}</span>
-                </div>
-                 <div className="absolute inset-y-0 left-0 flex items-center text-foreground">
-                    <span>{input}</span>
-                </div>
-
               </div>
             </form>
           )}
